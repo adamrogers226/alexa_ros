@@ -30,6 +30,7 @@ def alexa_webhook():
 
     # parse json request
     query_result = request.get_json(force = True).get('request')
+    # print(query_result.get('intent'))
     action = query_result.get('intent').get('name').replace('_', '.')
     slots = query_result.get('intent').get('slots')
     details = {}
@@ -53,6 +54,7 @@ def alexa_webhook():
 	
     # publish intent to voice intent topic
     intent = json.dumps({'action': action, 'details': details, 'source': 'Alexa'})
+    print(intent)
     intent_publisher.publish(intent)
 
     # return valid web response to skill console

@@ -10,7 +10,7 @@ ANGULAR_SPEED = math.pi/4   # r/s
 
 # get rotation command 
 def get_rotation(time_elapsed):
-    sign = 1 if intent_details.get("direction") == "right" else -1
+    sign = -1 if intent_details.get("direction") == "right" else 1
     total_time = get_rotation_duration()
     if time_elapsed < total_time:
         t = Twist()
