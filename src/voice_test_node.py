@@ -7,6 +7,8 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 
+import subprocess
+
 # constants
 LINEAR_SPEED  = 0.22        # m/s
 ANGULAR_SPEED = math.pi/4   # r/s
