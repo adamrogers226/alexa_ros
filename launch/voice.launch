@@ -1,6 +1,0 @@
-<launch>
-  <!-- nodes that work with alexa to take orders and deliver items-->
-  <node pkg="cr_ros_3" type="ngrok_launch.sh" name="ngrok_launch" output="screen"/>
-  <node pkg="cr_ros_3" type="voice_webhook.py" name="voice_webhook" output="screen"></node>
-  <node pkg="cr_ros_3" type="voice_destination_pub.py" name="voice_destination_pub" output="screen"></node>
-</launch>

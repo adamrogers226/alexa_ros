@@ -51,6 +51,8 @@ def alexa_webhook():
             'amount': slots.get('quantity').get('value', None),
             'unit': get_slot_value(slots, 'angle_unit')
         }
+    elif action in ['set.loc', 'goto.loc']:
+        details['location'] = get_slot_value(slots, 'number')
 	
     # publish intent to voice intent topic
     intent = json.dumps({'action': action, 'details': details, 'source': 'Alexa'})

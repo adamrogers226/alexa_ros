@@ -3,10 +3,89 @@
 import rospy, math, json
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry
+from tf.transformations import euler_from_quaternion
 
 # constants
 LINEAR_SPEED  = 0.22        # m/s
 ANGULAR_SPEED = math.pi/4   # r/s
+
+
+closest_ahead = 1
+direction = [1, True]
+
+locations = {}
+curr_pos = None
+
+prev_action = ''
+
+# update the current pose of the robot
+def updatePos(msg):
+    global curr_pos
+
+    curr_pos = msg.pose
+
+# looks at the closest object in front of the robot
+def get_pov(msg):
+    global closest_ahead
+
+    # obtain the section of the lidar scan that represents what is in front of the robot
+    ranges = list(msg.ranges[314:])
+    ranges.extend(list(msg.ranges[:45]))
+
+    # find the minimum value of the given range
+    closest_ahead = min(ranges)
+
+
+
+# wander around the environment to build the map
+def wander():
+    global closest_ahead
+    global direction
+
+    t = Twist()
+    if closest_ahead < 0.5:
+        if direction[1] == True:
+            direction[1] = False
+            direction[0] *= -1
+        t.angular.z = 0.6 * direction[0]
+    else:
+        direction[1] = True
+        t.linear.x = 0.4
+    return t
+
+
+
+# save a location for the robot to be able to nav to
+def mark(time_elapsed):
+    global locations
+    global action_type
+
+    num = intent_details.get('location')
+    if num not in locations:
+        print('New pose for ' + str(num))
+    else:
+        print('Updating pose for ' + str(num))
+
+    locations[num] = curr_pos
+    action_type = prev_action
+    print_locations() # debug
+
+    return get_vel(time_elapsed)
+
+
+
+# print each saved location in a nice format
+def print_locations():
+    for i in locations:
+        print('Location ' + str(i))
+        print(locations[i].pose.position)
+        print('')
+
+    print('\n\n\n')
+
+
 
 # get rotation command 
 def get_rotation(time_elapsed):
@@ -17,6 +96,7 @@ def get_rotation(time_elapsed):
         t.angular.z = ANGULAR_SPEED * sign
         return t
     return Twist()
+
 
 
 # get translation command 
@@ -30,6 +110,7 @@ def get_translation(time_elapsed):
     return Twist()
 
 
+
 # get duration of angular command
 def get_rotation_duration():
     angle = intent_details.get("angle")
@@ -41,6 +122,7 @@ def get_rotation_duration():
     return rospy.Duration(secs=seconds)
 
 
+
 # get duration of linear command
 def get_translation_duration():
     distance = intent_details.get("distance")
@@ -50,6 +132,7 @@ def get_translation_duration():
         amount = amount * 0.3048
     seconds = amount/LINEAR_SPEED
     return rospy.Duration(secs=seconds)
+
 
 
 # callback to parse intent json and update global vars
@@ -65,22 +148,36 @@ def perform_action_from_intent(message):
     intent_details = intent['details']
 
 
+
 # get command vel for each action type
 def get_vel(time_elapsed):
+    global prev_action
+    # print(action_type)
+
+    # want to call set location only once and continue what the robot was previously doing
+    if action_type != 'set.loc':
+        prev_action = action_type
 
     # call correct method for each action type
     if action_type == "navigation.translation":
         return get_translation(time_elapsed)
     elif action_type == "navigation.rotation":
         return get_rotation(time_elapsed)
+    elif action_type == "explore.space":
+        return wander()
+    elif action_type == "set.loc":
+        return mark(time_elapsed)
     else:
         return Twist()
+
 
 
 # init node and declare pub/subs
 rospy.init_node('voice_intent_handler')
 cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
 intent_sub = rospy.Subscriber('voice_intents', String, perform_action_from_intent)
+scan_sub = rospy.Subscriber('/scan', LaserScan, get_pov)
+odom_sub = rospy.Subscriber('/odom', Odometry, updatePos)
 rate = rospy.Rate(10)
 
 # some variables
