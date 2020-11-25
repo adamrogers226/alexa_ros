@@ -7,12 +7,9 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 
-import subprocess
-
 # constants
 LINEAR_SPEED  = 0.22        # m/s
 ANGULAR_SPEED = math.pi/4   # r/s
-
 
 closest_ahead = 1
 direction = [1, True]
@@ -21,6 +18,8 @@ locations = {}
 curr_pos = None
 
 prev_action = ''
+
+started = False
 
 # update the current pose of the robot
 def updatePos(msg):
@@ -45,6 +44,11 @@ def get_pov(msg):
 def wander():
     global closest_ahead
     global direction
+    global started
+
+    if not started:
+        commands_pub.publish('roslaunch cr_ros_3 turtlebot3_slam.launch')
+        started = True
 
     t = Twist()
     if closest_ahead < 0.5:
@@ -163,12 +167,16 @@ def get_vel(time_elapsed):
     # call correct method for each action type
     if action_type == "navigation.translation":
         return get_translation(time_elapsed)
+
     elif action_type == "navigation.rotation":
         return get_rotation(time_elapsed)
+
     elif action_type == "explore.space":
         return wander()
+
     elif action_type == "set.loc":
         return mark(time_elapsed)
+
     else:
         return Twist()
 
@@ -177,6 +185,7 @@ def get_vel(time_elapsed):
 # init node and declare pub/subs
 rospy.init_node('voice_intent_handler')
 cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+commands_pub = rospy.Publisher('cmds_to_run', String, queue_size=1)
 intent_sub = rospy.Subscriber('voice_intents', String, perform_action_from_intent)
 scan_sub = rospy.Subscriber('/scan', LaserScan, get_pov)
 odom_sub = rospy.Subscriber('/odom', Odometry, updatePos)
