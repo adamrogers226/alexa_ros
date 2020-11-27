@@ -19,7 +19,7 @@ curr_pos = None
 
 prev_action = ''
 
-started = False
+building = False
 
 # update the current pose of the robot
 def updatePos(msg):
@@ -40,15 +40,33 @@ def get_pov(msg):
 
 
 
+
+def stop_cmds():
+    commands_pub.publish('^C')
+
+    return Twist()
+
+
+# save the map currently being made
+def save_map(time_elapsed):
+    global action_type
+
+    commands_pub.publish('rosrun map_server map_saver -f map1')
+    action_type = prev_action
+
+    return get_vel(time_elapsed)
+
+
+
 # wander around the environment to build the map
 def wander():
     global closest_ahead
     global direction
-    global started
+    global building
 
-    if not started:
+    if not building:
         commands_pub.publish('roslaunch cr_ros_3 turtlebot3_slam.launch')
-        started = True
+        building = True
 
     t = Twist()
     if closest_ahead < 0.5:
@@ -161,7 +179,7 @@ def get_vel(time_elapsed):
     # print(action_type)
 
     # want to call set location only once and continue what the robot was previously doing
-    if action_type != 'set.loc':
+    if action_type not in ['set.loc', 'save.map']:
         prev_action = action_type
 
     # call correct method for each action type
@@ -176,6 +194,12 @@ def get_vel(time_elapsed):
 
     elif action_type == "set.loc":
         return mark(time_elapsed)
+
+    elif action_type == "save.map":
+        return save_map(time_elapsed)
+
+    elif action_type == "stop.cmds":
+        return stop_cmds()
 
     else:
         return Twist()

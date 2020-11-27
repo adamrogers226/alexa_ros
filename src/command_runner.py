@@ -6,12 +6,21 @@ import subprocess
 
 rospy.init_node('command_runner')
 
+process_lst = []
+
 def run_command(msg):
-    parts = msg.data.split(' ')
+    global p
 
-    subprocess.call(parts)
+    if msg.data != '^C':
+        parts = msg.data.split(' ')
 
-    # print(parts)
+        p = subprocess.Popen(parts, stdout=subprocess.PIPE)
+
+        process_lst.append(p)
+
+    else:
+        for p in process_lst:
+            p.terminate()
 
 command_sub = rospy.Subscriber('cmds_to_run', String, run_command)
 
