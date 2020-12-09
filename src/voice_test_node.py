@@ -7,10 +7,6 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 
-# constants
-LINEAR_SPEED  = 0.22        # m/s
-ANGULAR_SPEED = math.pi/4   # r/s
-
 closest_ahead = 1
 direction = [1, True]
 
@@ -21,11 +17,15 @@ prev_action = ''
 
 building = False
 
+
+
 # update the current pose of the robot
 def updatePos(msg):
     global curr_pos
 
     curr_pos = msg.pose
+
+
 
 # looks at the closest object in front of the robot
 def get_pov(msg):
@@ -40,11 +40,15 @@ def get_pov(msg):
 
 
 
-
+# stop all commands being run in the terminal
 def stop_cmds():
+    global building
+
+    building = False
     commands_pub.publish('^C')
 
     return Twist()
+
 
 
 # save the map currently being made
@@ -178,7 +182,7 @@ def get_vel(time_elapsed):
     global prev_action
     # print(action_type)
 
-    # want to call set location only once and continue what the robot was previously doing
+    # want to call set.loc and save.map only once then continue prev action
     if action_type not in ['set.loc', 'save.map']:
         prev_action = action_type
 
@@ -215,10 +219,9 @@ scan_sub = rospy.Subscriber('/scan', LaserScan, get_pov)
 odom_sub = rospy.Subscriber('/odom', Odometry, updatePos)
 rate = rospy.Rate(10)
 
-# some variables
 time_received = rospy.Time.now()
-intent_details = None
-action_type = None
+intent_details = None # details needed for current action
+action_type = None # current action being performed
 
 # Wait for published topics, exit on ^c
 while not rospy.is_shutdown():
