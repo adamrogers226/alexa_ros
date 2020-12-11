@@ -6,18 +6,26 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
+# variables used for wandering
 closest_ahead = 1
 direction = [1, True]
 
+# saved locations
 locations = {}
+
+# current pose that will be updated by the odom callback function
 curr_pos = None
 
 prev_action = ''
 
+# True if we are currently building a map, False if not
 building = False
 
-
+# used for move_base navigation
+client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
 # update the current pose of the robot
 def updatePos(msg):
@@ -38,6 +46,49 @@ def get_pov(msg):
     # find the minimum value of the given range
     closest_ahead = min(ranges)
 
+
+
+# start the navigation launch file
+def nav_mode():
+    global action_type
+
+    commands_pub.publish('roslaunch cr_ros_3 turtlebot3_navigation.launch')
+    action_type = 'navigation.halt'
+
+    return Twist()
+
+
+# convert a pose to a MoveBaseGoal for the robot to navigate to
+def loc_to_goal(pose):
+    goal_pose = MoveBaseGoal()
+    goal_pose.target_pose.header.frame_id = 'map'
+    goal_pose.target_pose.pose.position.x = pose.pose.position.x
+    goal_pose.target_pose.pose.position.y = pose.pose.position.y
+    goal_pose.target_pose.pose.position.z = pose.pose.position.z
+    goal_pose.target_pose.pose.orientation.x = pose.pose.orientation.x
+    goal_pose.target_pose.pose.orientation.y = pose.pose.orientation.y
+    goal_pose.target_pose.pose.orientation.z = pose.pose.orientation.z
+    goal_pose.target_pose.pose.orientation.w = pose.pose.orientation.w
+    return goal_pose
+
+
+
+# navigate to a location
+def navigate_to_loc():
+    global action_type
+
+    # get desired pose
+    desired = intent_details.get('location')
+    pose = locations[desired]
+
+    # convert pose and navigate to it
+    goal = loc_to_goal(pose)
+    client.send_goal(goal)
+    client.wait_for_result()
+
+    action_type = "navigation.halt"
+
+    return Twist()
 
 
 # stop all commands being run in the terminal
@@ -180,7 +231,6 @@ def perform_action_from_intent(message):
 # get command vel for each action type
 def get_vel(time_elapsed):
     global prev_action
-    # print(action_type)
 
     # want to call set.loc and save.map only once then continue prev action
     if action_type not in ['set.loc', 'save.map']:
@@ -204,6 +254,12 @@ def get_vel(time_elapsed):
 
     elif action_type == "stop.cmds":
         return stop_cmds()
+
+    elif action_type == "goto.loc":
+        return navigate_to_loc()
+
+    elif action_type == "navigation.mode":
+        return nav_mode()
 
     else:
         return Twist()
