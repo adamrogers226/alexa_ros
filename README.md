@@ -1,3 +1,5 @@
+Link to video: https://drive.google.com/file/d/13oYe9ykPTL0HESwX94zT-4yiwAG1ZDUe/view?usp=sharing
+
 ### Voice setup
 * cd catkin_ws/src/cr_ros_3/
 * unzip the Ngrok zip using `unzip ngrok-stable-linux-amd64.zip` (only once)
