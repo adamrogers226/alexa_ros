@@ -106,7 +106,7 @@ def stop_cmds():
 def save_map(time_elapsed):
     global action_type
 
-    commands_pub.publish('rosrun map_server map_saver -f map1')
+    commands_pub.publish('rosrun map_server map_saver -f map2')
     action_type = prev_action
 
     return get_vel(time_elapsed)
